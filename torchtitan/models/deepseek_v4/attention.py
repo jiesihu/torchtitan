@@ -201,12 +201,12 @@ class DSV4FlexInnerAttention(FlexInnerAttention):
         idx_q=None,
         idx_k=None,
         idx_w=None,
-        attention_masks=None,
+        attention_metadata=None,
     ) -> torch.Tensor:
         """Run DSV4 sparse attention over a folded token stream."""
-        if attention_masks is not None:
+        if attention_metadata is not None:
             raise ValueError(
-                "DSV4FlexInnerAttention does not accept attention_masks; "
+                "DSV4FlexInnerAttention does not accept attention_metadata; "
                 "the DSA block mask is built internally."
             )
         if attn_sink is None:
@@ -272,7 +272,7 @@ class DSV4FlexInnerAttention(FlexInnerAttention):
                 q,
                 kv,
                 kv,
-                attention_masks=block_mask,
+                attention_metadata=block_mask,
                 score_mod=v4_sink_score_mod,
                 scale=self.softmax_scale,
             )
@@ -289,13 +289,13 @@ class SlidingWindowAttention(DSV4FlexInnerAttention):
         swa_k,
         attn_sink,
         *,
-        attention_masks=None,
+        attention_metadata=None,
     ) -> torch.Tensor:
         return self._forward_impl(
             q,
             swa_k,
             attn_sink,
-            attention_masks=attention_masks,
+            attention_metadata=attention_metadata,
         )
 
 
@@ -311,14 +311,14 @@ class HeavilyCompressedAttention(DSV4FlexInnerAttention):
         cmp_k,
         attn_sink,
         *,
-        attention_masks=None,
+        attention_metadata=None,
     ) -> torch.Tensor:
         return self._forward_impl(
             q,
             swa_k,
             attn_sink,
             cmp_k=cmp_k,
-            attention_masks=attention_masks,
+            attention_metadata=attention_metadata,
         )
 
 
@@ -337,7 +337,7 @@ class CompressedSparseAttention(DSV4FlexInnerAttention):
         idx_w,
         attn_sink,
         *,
-        attention_masks=None,
+        attention_metadata=None,
     ) -> torch.Tensor:
         return self._forward_impl(
             q,
@@ -347,7 +347,7 @@ class CompressedSparseAttention(DSV4FlexInnerAttention):
             idx_q=idx_q,
             idx_k=idx_k,
             idx_w=idx_w,
-            attention_masks=attention_masks,
+            attention_metadata=attention_metadata,
         )
 
 
@@ -429,7 +429,7 @@ class Attention(BaseAttention):
 
         self.inner_attention = cfg.inner_attention.build()
 
-    def forward(self, x, attention_masks=None, positions=None):
+    def forward(self, x, attention_metadata=None, positions=None):
         """Apply one DeepSeek V4 attention layer over folded tokens."""
         tp_group = spmd_mesh_group(MeshAxisName.TP)
         if tp_group is not None:
@@ -481,7 +481,7 @@ class Attention(BaseAttention):
                 idx_k,
                 idx_w,
                 attn_sink_param,
-                attention_masks=attention_masks,
+                attention_metadata=attention_metadata,
             )
         elif self.compress_ratio > 1:
             o = self.inner_attention(
@@ -489,14 +489,14 @@ class Attention(BaseAttention):
                 kv,
                 cmp_k,
                 attn_sink_param,
-                attention_masks=attention_masks,
+                attention_metadata=attention_metadata,
             )
         else:
             o = self.inner_attention(
                 q,
                 kv,
                 attn_sink_param,
-                attention_masks=attention_masks,
+                attention_metadata=attention_metadata,
             )
 
         o_nope, o_rope = torch.split(o, [self.head_dim - rd, rd], dim=-1)

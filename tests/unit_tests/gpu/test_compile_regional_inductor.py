@@ -109,7 +109,7 @@ class TestRegionalInductorCodegen(unittest.TestCase):
         )
 
         def fn(q, k, v):
-            return (attn(q, k, v, attention_masks=block_mask) ** 2).sum()
+            return (attn(q, k, v, attention_metadata=block_mask) ** 2).sum()
 
         compiled = torch.compile(fn, backend=backend, fullgraph=True)
         _, codes = run_fw_bw_and_get_code(lambda: compiled(q, k, v))

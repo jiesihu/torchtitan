@@ -685,8 +685,8 @@ def prepare_ep_overlap_trace_call_inputs(
 
     extra_kwargs = args[3]
     positions = extra_kwargs.get("positions")
-    attention_masks = extra_kwargs.get("attention_masks")
-    if not isinstance(positions, torch.Tensor) or attention_masks is None:
+    attention_metadata = extra_kwargs.get("attention_metadata")
+    if not isinstance(positions, torch.Tensor) or attention_metadata is None:
         return None
     if positions.dim() < 1:
         return None
@@ -716,15 +716,15 @@ def prepare_ep_overlap_trace_call_inputs(
             dq_kv_order_spt=mask.dq_kv_order_spt,
         )
 
-    if isinstance(attention_masks, dict):
-        rebound_masks = {key: rebind(mask) for key, mask in attention_masks.items()}
+    if isinstance(attention_metadata, dict):
+        rebound_masks = {key: rebind(mask) for key, mask in attention_metadata.items()}
     else:
-        rebound_masks = rebind(attention_masks)
-    if rebound_masks is attention_masks:
+        rebound_masks = rebind(attention_metadata)
+    if rebound_masks is attention_metadata:
         return None
 
     rebound_extra_kwargs = dict(extra_kwargs)
-    rebound_extra_kwargs["attention_masks"] = rebound_masks
+    rebound_extra_kwargs["attention_metadata"] = rebound_masks
     rebound_args = list(args)
     rebound_args[3] = rebound_extra_kwargs
     return tuple(rebound_args), kwargs
