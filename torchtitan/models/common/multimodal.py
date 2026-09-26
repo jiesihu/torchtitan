@@ -17,12 +17,7 @@ from typing import Self
 import spmd_types as spmd
 import torch
 
-from torchtitan.config import (
-    CompileConfig,
-    ParallelismConfig,
-    TORCH_DTYPE_MAP,
-    TrainingConfig,
-)
+from torchtitan.config import ParallelismConfig, TORCH_DTYPE_MAP, TrainingConfig
 from torchtitan.distributed.activation_checkpoint import ActivationCheckpointingConfig
 from torchtitan.distributed.parallel_dims import ParallelDims
 
@@ -40,7 +35,6 @@ class MultimodalModel(Decoder):
         parallel_dims: ParallelDims,
         training: TrainingConfig,
         parallelism: ParallelismConfig,
-        compile_config: CompileConfig | None,
         ac_config: ActivationCheckpointingConfig | None,
         dump_folder: str,
         skip_dp: bool = False,
@@ -59,21 +53,6 @@ class MultimodalModel(Decoder):
                 policy.apply(self)
                 for encoder in encoders:
                     policy.apply(encoder)
-
-            if compile_config is not None and "model" in compile_config.components:
-                from torchtitan.distributed.compile import apply_compile
-
-                apply_compile(
-                    self,
-                    compile_config=compile_config,
-                    parallel_dims=parallel_dims,
-                )
-                for encoder in encoders:
-                    apply_compile(
-                        encoder,
-                        compile_config=compile_config,
-                        parallel_dims=parallel_dims,
-                    )
 
             if not skip_dp:
                 self._apply_fsdp(

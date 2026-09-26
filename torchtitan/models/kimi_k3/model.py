@@ -14,7 +14,7 @@ import torch
 from torch import nn
 from torch.nn.attention.flex_attention import BlockMask
 
-from torchtitan.config import CompileConfig, ParallelismConfig, TrainingConfig
+from torchtitan.config import ParallelismConfig, TrainingConfig
 from torchtitan.distributed.activation_checkpoint import ActivationCheckpointingConfig
 from torchtitan.distributed.parallel_dims import MeshAxisName, ParallelDims
 from torchtitan.distributed.spmd_types import (
@@ -393,7 +393,6 @@ class KimiK3Model(MultimodalModel):
         parallel_dims: ParallelDims,
         training: TrainingConfig,
         parallelism: ParallelismConfig,
-        compile_config: CompileConfig | None,
         ac_config: ActivationCheckpointingConfig | None,
         dump_folder: str,
         skip_dp: bool = False,
@@ -411,9 +410,6 @@ class KimiK3Model(MultimodalModel):
                 "Kimi K3 currently supports FSDP2 data parallelism only; "
                 f"disable {', '.join(unsupported)}."
             )
-        if compile_config is not None and "model" in compile_config.components:
-            raise NotImplementedError("Kimi K3 does not support model compilation yet.")
-
         from torchtitan.distributed.utils import get_spmd_context
 
         with get_spmd_context(parallel_dims=parallel_dims):

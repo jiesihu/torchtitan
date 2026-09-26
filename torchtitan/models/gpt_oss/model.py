@@ -15,7 +15,7 @@ import torch._dynamo
 from torch import nn
 from torch.nn.attention.flex_attention import BlockMask
 
-from torchtitan.config import CompileConfig, ParallelismConfig, TrainingConfig
+from torchtitan.config import ParallelismConfig, TrainingConfig
 from torchtitan.distributed.activation_checkpoint import ActivationCheckpointingConfig
 from torchtitan.distributed.parallel_dims import ParallelDims
 from torchtitan.models.common.attention import (
@@ -251,7 +251,6 @@ class GptOssModel(Decoder):
         parallel_dims: ParallelDims,
         training: TrainingConfig,
         parallelism: ParallelismConfig,
-        compile_config: CompileConfig | None,
         ac_config: ActivationCheckpointingConfig | None,
         dump_folder: str,
         skip_dp: bool = False,
@@ -265,29 +264,10 @@ class GptOssModel(Decoder):
                 "sinks are not sharded over CP."
             )
 
-        if compile_config is not None and "model" in compile_config.components:
-            if parallel_dims.tp_enabled or parallel_dims.ep_enabled:
-                has_sliding_window_attention = any(
-                    isinstance(
-                        window_size := getattr(module, "window_size", None),
-                        (tuple, list),
-                    )
-                    and len(window_size) > 0
-                    and window_size[0] != -1
-                    for module in self.modules()
-                )
-                min_recompile_limit = 12 if has_sliding_window_attention else 10
-                # PyTorch types this config as Literal[8], but runtime accepts ints.
-                # pyrefly: ignore [bad-assignment]
-                torch._dynamo.config.recompile_limit = max(
-                    torch._dynamo.config.recompile_limit,
-                    min_recompile_limit,
-                )
         return super().parallelize(
             parallel_dims=parallel_dims,
             training=training,
             parallelism=parallelism,
-            compile_config=compile_config,
             ac_config=ac_config,
             dump_folder=dump_folder,
             skip_dp=skip_dp,

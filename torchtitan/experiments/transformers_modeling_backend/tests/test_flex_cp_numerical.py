@@ -23,7 +23,6 @@ import os
 import torch
 import torch.distributed as dist
 
-from torchtitan.config import CompileConfig
 from torchtitan.distributed import ParallelDims, utils as dist_utils
 from torchtitan.distributed.context_parallel import cp_shard
 from torchtitan.experiments.transformers_modeling_backend.config_registry import (
@@ -127,7 +126,6 @@ def main():
         parallel_dims=parallel_dims,
         training=cfg.training,
         parallelism=cfg.parallelism,
-        compile_config=CompileConfig(),
         ac_config=None,
         dump_folder="/tmp/flex_cp_spike",
     )

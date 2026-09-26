@@ -10,12 +10,7 @@ from typing import Any, cast, Self
 import spmd_types as spmd
 import torch
 from torch import nn, Tensor
-from torchtitan.config import (
-    CompileConfig,
-    ParallelismConfig,
-    TORCH_DTYPE_MAP,
-    TrainingConfig,
-)
+from torchtitan.config import ParallelismConfig, TORCH_DTYPE_MAP, TrainingConfig
 from torchtitan.distributed.activation_checkpoint import ActivationCheckpointingConfig
 from torchtitan.distributed.parallel_dims import ParallelDims
 from torchtitan.distributed.spmd_types import annotate_replicated_parameters
@@ -192,7 +187,6 @@ class FluxModel(BaseModel):
         parallel_dims: ParallelDims,
         training: TrainingConfig,
         parallelism: ParallelismConfig,
-        compile_config: CompileConfig | None,
         ac_config: ActivationCheckpointingConfig | None,
         dump_folder: str,
         skip_dp: bool = False,
@@ -215,10 +209,6 @@ class FluxModel(BaseModel):
 
             self._parallelize(parallel_dims)
             annotate_replicated_parameters(self, parallel_dims)
-
-            if compile_config is not None and "model" in compile_config.components:
-                for block in (*self.double_blocks, *self.single_blocks):
-                    block.compile(backend=compile_config.backend, fullgraph=True)
 
             if not skip_dp:
                 self._apply_fsdp(
