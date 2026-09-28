@@ -1096,7 +1096,7 @@ class TestReparametrizeOptimizer(unittest.TestCase):
     DTYPE = torch.float32
 
     def test_titan_optimizers_container(self):
-        from torchtitan.components.optimizer import (
+        from torchtitan.components.optimization import (
             OptimizersContainer,
             ParamGroupConfig,
         )

@@ -314,6 +314,18 @@ def muse_glimmer_debugmodel_fsdp2_pp2_deferred_gradient_reduction() -> Trainer.C
     return config
 
 
+def muse_glimmer_debugmodel_fsdp2_pp2_optimizer_cuda_graph() -> Trainer.Config:
+    config = muse_glimmer_debugmodel_fsdp2_pp2_deferred_gradient_reduction()
+    config.optimization.enable_cuda_graph = True
+    return config
+
+
+def muse_glimmer_debugmodel_fsdp2_optimizer_cuda_graph() -> Trainer.Config:
+    config = muse_glimmer_debugmodel_fsdp2_deferred_gradient_reduction()
+    config.optimization.enable_cuda_graph = True
+    return config
+
+
 def llama3_debugmodel_fsdp2_pp2_1f1b_layers_per_stage() -> Trainer.Config:
     config = llama3_debugmodel_fsdp2_pp2_1f1b()
     config.parallelism.pipeline_parallel_layers_per_stage = 4
@@ -424,7 +436,7 @@ def muse_glimmer_debugmodel_optimizer_bf16_states() -> Trainer.Config:
     config = muse_glimmer_debugmodel(seq_len=2048)
     _set_spmd_typechecking(config, typechecking=True)
     config.training.mixed_precision_reduce = "float32"
-    config.optimizer.implementation = "fused_opt_states_bf16"
+    config.optimization.optimizer.implementation = "fused_opt_states_bf16"
     return config
 
 

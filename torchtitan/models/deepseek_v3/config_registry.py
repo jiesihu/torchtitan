@@ -6,7 +6,11 @@
 
 from torchtitan.components.data import ConcatThenSplitPackingConfig, GrainDataLoader
 from torchtitan.components.loss import ChunkedLossWrapper, CrossEntropyLoss
-from torchtitan.components.optimizer import default_adamw, LRSchedulersContainer
+from torchtitan.components.optimization import (
+    default_adamw,
+    LRSchedulersContainer,
+    Optimization,
+)
 from torchtitan.config import CompileConfig, TrainingConfig
 from torchtitan.config.parallelism import ParallelismConfig
 from torchtitan.config.transform import (
@@ -68,12 +72,14 @@ def deepseek_v3_debugmodel(
         dataloader=GrainDataLoader.Config(
             dataset=ConcatThenSplitPackingConfig(dataset=DATASETS["c4_test"]),
         ),
-        optimizer=default_adamw(lr=8e-4),
-        lr_scheduler=LRSchedulersContainer.Config(
-            warmup_steps=2,
-            decay_ratio=0.8,
-            decay_type="linear",
-            min_lr_factor=0.0,
+        optimization=Optimization.Config(
+            optimizer=default_adamw(lr=8e-4),
+            lr_scheduler=LRSchedulersContainer.Config(
+                warmup_steps=2,
+                decay_ratio=0.8,
+                decay_type="linear",
+                min_lr_factor=0.0,
+            ),
         ),
         training=TrainingConfig(
             num_tokens_per_microbatch_per_dp_rank=8 * model_config.max_context_length,
@@ -178,11 +184,13 @@ def deepseek_v3_16b(seq_len: int | None = None) -> Trainer.Config:
         dataloader=GrainDataLoader.Config(
             dataset=ConcatThenSplitPackingConfig(dataset=DATASETS["c4"]),
         ),
-        optimizer=default_adamw(lr=2.2e-4),
-        lr_scheduler=LRSchedulersContainer.Config(
-            decay_ratio=0.8,
-            decay_type="cosine",
-            min_lr_factor=0.1,
+        optimization=Optimization.Config(
+            optimizer=default_adamw(lr=2.2e-4),
+            lr_scheduler=LRSchedulersContainer.Config(
+                decay_ratio=0.8,
+                decay_type="cosine",
+                min_lr_factor=0.1,
+            ),
         ),
         training=TrainingConfig(
             num_tokens_per_microbatch_per_dp_rank=4 * model_config.max_context_length,
@@ -232,12 +240,14 @@ def deepseek_v3_671b(seq_len: int | None = None) -> Trainer.Config:
         dataloader=GrainDataLoader.Config(
             dataset=ConcatThenSplitPackingConfig(dataset=DATASETS["c4"]),
         ),
-        optimizer=default_adamw(lr=2.2e-4),
-        lr_scheduler=LRSchedulersContainer.Config(
-            warmup_steps=2000,
-            decay_ratio=0.8,
-            decay_type="cosine",
-            min_lr_factor=0.1,
+        optimization=Optimization.Config(
+            optimizer=default_adamw(lr=2.2e-4),
+            lr_scheduler=LRSchedulersContainer.Config(
+                warmup_steps=2000,
+                decay_ratio=0.8,
+                decay_type="cosine",
+                min_lr_factor=0.1,
+            ),
         ),
         training=TrainingConfig(
             num_tokens_per_microbatch_per_dp_rank=4 * model_config.max_context_length,

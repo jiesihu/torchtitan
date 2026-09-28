@@ -102,7 +102,8 @@ class OptimizersContainer(Optimizer, Stateful, Configurable, Generic[T]):
 
     Args:
         config (Config): Optimizer configuration with param group definitions.
-        model_parts (List[nn.Module]): List of model parts to be optimized.
+        model_parts (list[nn.Module]): Model parts to optimize.
+        enable_cuda_graph (bool): Whether optimizer steps run in a CUDA graph.
     """
 
     @dataclass(kw_only=True, slots=True)
@@ -127,7 +128,7 @@ class OptimizersContainer(Optimizer, Stateful, Configurable, Generic[T]):
           momentum and variance in bfloat16 via a step pre-hook so the fused
           CUDA kernel uses its mixed-precision path (fp32 params + bf16 states).
           Only supported for Adam/AdamW. See
-          torchtitan/components/optimizer/bf16_optimizer_states.md.
+          torchtitan/components/optimization/bf16_optimizer_states.md.
         - more info: https://pytorch.org/docs/stable/optim.html
         """
 
@@ -222,7 +223,23 @@ class OptimizersContainer(Optimizer, Stateful, Configurable, Generic[T]):
 
         return groups, patterns
 
-    def __init__(self, config: Config, *, model_parts: list[nn.Module]) -> None:
+    def __init__(
+        self,
+        config: Config,
+        *,
+        model_parts: list[nn.Module],
+        enable_cuda_graph: bool = False,
+    ) -> None:
+        if any(
+            "capturable" in group.optimizer_kwargs for group in config.param_groups
+        ) or any(
+            "capturable" in kwargs
+            for kwargs in config.optimizer_factory_kwargs_by_name.values()
+        ):
+            raise ValueError(
+                "Set CUDA graph capture with enable_cuda_graph, not capturable."
+            )
+
         impl_kwargs = self._build_impl_kwargs(config)
         param_group_configs = config.param_groups
         all_params = []
@@ -238,6 +255,33 @@ class OptimizersContainer(Optimizer, Stateful, Configurable, Generic[T]):
                     opt_param_groups,
                     **config.optimizer_factory_kwargs_by_name.get(opt_name, {}),
                 )
+                if enable_cuda_graph:
+                    if any(
+                        "capturable" not in group for group in optimizer.param_groups
+                    ):
+                        raise ValueError(
+                            f"Optimizer {type(optimizer).__name__} does not support "
+                            "CUDA graph capture."
+                        )
+                    for group in optimizer.param_groups:
+                        group["initial_lr"] = group["lr"]
+                        group["capturable"] = True
+                        group["lr"] = torch.tensor(
+                            group["lr"],
+                            dtype=torch.float32,
+                            device=group["params"][0].device,
+                        )
+
+                    def _save_host_lr(
+                        _optimizer: Optimizer, state_dict: dict[str, Any]
+                    ) -> dict[str, Any]:
+                        for group in state_dict["param_groups"]:
+                            if isinstance(group["lr"], torch.Tensor):
+                                group["lr"] = float(group["lr"])
+                        return state_dict
+
+                    optimizer.register_state_dict_post_hook(_save_host_lr)
+
                 self.optimizers.append(cast(T, optimizer))
                 self._log_optimizer(optimizer, part_idx, patterns_by_opt_name[opt_name])
                 for group in opt_param_groups:

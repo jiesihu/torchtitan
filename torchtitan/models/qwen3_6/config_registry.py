@@ -8,7 +8,11 @@ from dataclasses import replace
 
 from torchtitan.components.data import GrainDataLoader, SingleDatasetConfig
 from torchtitan.components.loss import ChunkedLossWrapper, CrossEntropyLoss
-from torchtitan.components.optimizer import default_adamw, LRSchedulersContainer
+from torchtitan.components.optimization import (
+    default_adamw,
+    LRSchedulersContainer,
+    Optimization,
+)
 from torchtitan.components.tokenizer import MultiModalTokenizer
 from torchtitan.config import TrainingConfig
 from torchtitan.config.parallelism import ParallelismConfig
@@ -60,12 +64,14 @@ def qwen36_debugmodel(
             collator=_multimodal_collator_config(MM_DATASETS["cc12m-test"]),
             streaming_shuffle_buffer_size=128,
         ),
-        optimizer=default_adamw(lr=5e-3),
-        lr_scheduler=LRSchedulersContainer.Config(
-            warmup_steps=2,
-            decay_ratio=0.8,
-            decay_type="linear",
-            min_lr_factor=0.0,
+        optimization=Optimization.Config(
+            optimizer=default_adamw(lr=5e-3),
+            lr_scheduler=LRSchedulersContainer.Config(
+                warmup_steps=2,
+                decay_ratio=0.8,
+                decay_type="linear",
+                min_lr_factor=0.0,
+            ),
         ),
         training=TrainingConfig(
             num_tokens_per_microbatch_per_dp_rank=1 * model_config.max_context_length,
@@ -109,8 +115,10 @@ def qwen36_debugmodel_moe(
             collator=_multimodal_collator_config(MM_DATASETS["cc12m-test"]),
             streaming_shuffle_buffer_size=128,
         ),
-        optimizer=default_adamw(lr=5e-3),
-        lr_scheduler=LRSchedulersContainer.Config(warmup_steps=2),
+        optimization=Optimization.Config(
+            optimizer=default_adamw(lr=5e-3),
+            lr_scheduler=LRSchedulersContainer.Config(warmup_steps=2),
+        ),
         training=TrainingConfig(
             num_tokens_per_microbatch_per_dp_rank=1 * model_config.max_context_length,
             max_context_length=model_config.max_context_length,
@@ -145,8 +153,10 @@ def qwen36_27b(seq_len: int | None = None) -> Trainer.Config:
             collator=_multimodal_collator_config(MM_DATASETS["cc12m"]),
             streaming_shuffle_buffer_size=128,
         ),
-        optimizer=default_adamw(lr=5e-4),
-        lr_scheduler=LRSchedulersContainer.Config(warmup_steps=20),
+        optimization=Optimization.Config(
+            optimizer=default_adamw(lr=5e-4),
+            lr_scheduler=LRSchedulersContainer.Config(warmup_steps=20),
+        ),
         training=TrainingConfig(
             num_tokens_per_microbatch_per_dp_rank=4 * model_config.max_context_length,
             max_context_length=model_config.max_context_length,
@@ -179,8 +189,10 @@ def qwen36_35b_a3b(seq_len: int | None = None) -> Trainer.Config:
             collator=_multimodal_collator_config(MM_DATASETS["cc12m"]),
             streaming_shuffle_buffer_size=128,
         ),
-        optimizer=default_adamw(lr=5e-4),
-        lr_scheduler=LRSchedulersContainer.Config(warmup_steps=20),
+        optimization=Optimization.Config(
+            optimizer=default_adamw(lr=5e-4),
+            lr_scheduler=LRSchedulersContainer.Config(warmup_steps=20),
+        ),
         training=TrainingConfig(
             num_tokens_per_microbatch_per_dp_rank=4 * model_config.max_context_length,
             max_context_length=model_config.max_context_length,

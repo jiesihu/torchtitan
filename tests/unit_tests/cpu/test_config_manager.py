@@ -266,6 +266,26 @@ class TestConfigManager(unittest.TestCase):
             ["--module", "llama3", "--config", "llama3_debugmodel"]
         )
         assert not config.training.disable_cuda_graphs
+        assert not config.optimization.enable_cuda_graph
+
+    def test_optimizer_cuda_graph_requires_cuda_graphs_enabled(self):
+        config = ConfigManager().parse_args(
+            ["--module", "muse_glimmer", "--config", "muse_glimmer_debugmodel"]
+        )
+        config.optimization.enable_cuda_graph = True
+        config.training.disable_cuda_graphs = True
+
+        with pytest.raises(ValueError, match="requires CUDA graphs"):
+            config.__post_init__()
+
+    def test_optimizer_cuda_graph_accepts_non_fused_optimizer(self):
+        config = ConfigManager().parse_args(
+            ["--module", "muse_glimmer", "--config", "muse_glimmer_debugmodel"]
+        )
+        config.optimization.enable_cuda_graph = True
+        config.optimization.optimizer.implementation = "foreach"
+
+        config.__post_init__()
 
     def test_cuda_graphs_reject_unsupported_expert_parallelism(self):
         with cuda_graphs_supported(True):

@@ -24,7 +24,7 @@ from torch.testing._internal.distributed._tensor.common_dtensor import (
     DTensorTestBase,
     with_comms,
 )
-from torchtitan.components.optimizer import OptimizersContainer, ParamGroupConfig
+from torchtitan.components.optimization import OptimizersContainer, ParamGroupConfig
 from torchtitan.distributed import ParallelDims
 from torchtitan.models.deepseek_v3.model import Attention
 
