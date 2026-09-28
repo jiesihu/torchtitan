@@ -65,6 +65,34 @@ class TestApplySimpleFSDPSingleRank(unittest.TestCase):
             model(torch.randn(2, 8, dtype=torch.bfloat16)).dtype, torch.bfloat16
         )
 
+    @patch("torchtitan.distributed.parallel_dims.device_type", "cpu")
+    def test_preserves_classes_without_direct_parameters(self):
+        parallel_dims = ParallelDims(
+            dp_replicate=1,
+            dp_shard=1,
+            cp=1,
+            tp=1,
+            pp=1,
+            ep=1,
+            world_size=1,
+            enable_sequence_parallel=False,
+        )
+        training = TrainingConfig(
+            mixed_precision_param="bfloat16",
+            mixed_precision_reduce="float32",
+        )
+        model = nn.Sequential(nn.ReLU(), nn.Linear(8, 8))
+
+        model = apply_simple_fsdp(
+            model,
+            parallel_dims=parallel_dims,
+            training=training,
+        )
+
+        self.assertIs(type(model), nn.Sequential)
+        self.assertIs(type(model[0]), nn.ReLU)
+        self.assertIsNot(type(model[1]), nn.Linear)
+
 
 if __name__ == "__main__":
     unittest.main()

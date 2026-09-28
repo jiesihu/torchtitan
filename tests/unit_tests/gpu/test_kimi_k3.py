@@ -12,7 +12,7 @@ from torch.nn.attention.flex_attention import BlockMask
 from torchtitan.config.parallelism import ParallelismConfig
 from torchtitan.models.kimi_k3 import _kimi_k3_config, _vision_encoder_config
 from torchtitan.models.kimi_k3.config_registry import _dist_muon_optimizer
-from torchtitan.models.kimi_k3.kda import KDA, KDAKernel
+from torchtitan.models.kimi_k3.kda import InnerKDA, KDAKernel
 from torchtitan.models.kimi_k3.model import KimiK3Model
 from torchtitan.models.kimi_k3.state_dict_adapter import KimiK3StateDictAdapter
 
@@ -152,7 +152,8 @@ class TestKimiK3(unittest.TestCase):
         # MLA layers read the BlockMask; KDA layers read document offsets.
         self.assertIsInstance(attention_metadata[full_attention_backend], BlockMask)
         torch.testing.assert_close(
-            attention_metadata[KDA].cu_seq_q, torch.tensor([0, 4], dtype=torch.int32)
+            attention_metadata[InnerKDA].cu_seq_q,
+            torch.tensor([0, 4], dtype=torch.int32),
         )
 
     def test_padded_tail_is_one_kda_segment(self):
@@ -165,7 +166,8 @@ class TestKimiK3(unittest.TestCase):
         padding_mask[7:] = True
         masks = model.get_attention_metadata(positions, padding_mask=padding_mask)
         torch.testing.assert_close(
-            masks[KDA].cu_seq_q, torch.tensor([0, 3, 7, 12], dtype=torch.int32)
+            masks[InnerKDA].cu_seq_q,
+            torch.tensor([0, 3, 7, 12], dtype=torch.int32),
         )
 
     @unittest.skipIf(

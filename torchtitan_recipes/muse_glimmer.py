@@ -6,20 +6,29 @@
 
 """Context-parallel Muse Glimmer recipes."""
 
+from collections.abc import Mapping
+
 from torchtitan.components.data import GrainDataLoader
 from torchtitan.config.transform import apply_transforms, ContextParallelTransform
 from torchtitan.distributed.context_parallel import (
     ContextParallelLoadBalancer,
     HeadTailCPLoadBalancer,
 )
+from torchtitan.models.common.attention import (
+    FlexInnerAttention,
+    InnerAttention,
+    SlidingWindowFlexInnerAttention,
+    VarlenInnerAttention,
+)
 from torchtitan.models.common.cp_attention import (
     KVAllGatherCPFlexInnerAttention,
+    KVAllGatherCPSlidingWindowFlexInnerAttention,
     UlyssesCPFlexInnerAttention,
+    UlyssesCPSlidingWindowFlexInnerAttention,
     UlyssesCPVarlenInnerAttention,
 )
 from torchtitan.models.muse_glimmer import model_registry
 from torchtitan.models.muse_glimmer.config_registry import muse_glimmer_30b
-from torchtitan.protocols.module import Module
 from torchtitan.trainer import Trainer
 
 
@@ -35,7 +44,7 @@ def muse_glimmer_30b_bf16_optimizer_states() -> Trainer.Config:
 
 def _muse_glimmer_30b_cp(
     *,
-    inner_attention: type[Module],
+    inner_attention_backends: Mapping[type[InnerAttention], type[InnerAttention]],
     cp_degree: int,
     load_balancer: ContextParallelLoadBalancer.Config | None,
 ) -> Trainer.Config:
@@ -44,14 +53,19 @@ def _muse_glimmer_30b_cp(
     config.parallelism.context_parallel_load_balancer = load_balancer
     return apply_transforms(
         config,
-        [ContextParallelTransform(inner_attention=inner_attention)],
+        [ContextParallelTransform(inner_attention_backends=inner_attention_backends)],
     )
 
 
 def muse_glimmer_30b_allgather_cp8() -> Trainer.Config:
     """Muse Glimmer 30B with all-gather CP degree 8."""
     return _muse_glimmer_30b_cp(
-        inner_attention=KVAllGatherCPFlexInnerAttention,
+        inner_attention_backends={
+            FlexInnerAttention: KVAllGatherCPFlexInnerAttention,
+            SlidingWindowFlexInnerAttention: (
+                KVAllGatherCPSlidingWindowFlexInnerAttention
+            ),
+        },
         cp_degree=8,
         load_balancer=HeadTailCPLoadBalancer.Config(),
     )
@@ -63,7 +77,10 @@ def muse_glimmer_30b_ulysses_cp2() -> Trainer.Config:
     The model has two KV heads, which limits Ulysses CP to degree 2.
     """
     return _muse_glimmer_30b_cp(
-        inner_attention=UlyssesCPFlexInnerAttention,
+        inner_attention_backends={
+            FlexInnerAttention: UlyssesCPFlexInnerAttention,
+            SlidingWindowFlexInnerAttention: (UlyssesCPSlidingWindowFlexInnerAttention),
+        },
         cp_degree=2,
         # Ulysses does not support token reordering.
         load_balancer=None,
@@ -83,5 +100,11 @@ def muse_glimmer_30b_ulysses_varlen_cp2() -> Trainer.Config:
     config.parallelism.context_parallel_load_balancer = None
     return apply_transforms(
         config,
-        [ContextParallelTransform(inner_attention=UlyssesCPVarlenInnerAttention)],
+        [
+            ContextParallelTransform(
+                inner_attention_backends={
+                    VarlenInnerAttention: UlyssesCPVarlenInnerAttention
+                }
+            )
+        ],
     )

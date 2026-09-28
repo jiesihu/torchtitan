@@ -9,13 +9,13 @@ from typing import cast, TYPE_CHECKING
 
 import torch
 from torch import nn
+from torch.nn.attention.flex_attention import BlockMask
 
 from torchtitan.config import TORCH_DTYPE_MAP, TrainingConfig
 from torchtitan.config.parallelism import ParallelismConfig
 from torchtitan.distributed.parallel_dims import ParallelDims
 from torchtitan.models.common.attention import (
     AttentionMetadata,
-    FlexAttentionMetadata,
     VarlenAttentionMetadata,
 )
 from torchtitan.models.common.decoder import Decoder, TransformerBlock
@@ -72,7 +72,7 @@ class DeepSeekV4TransformerBlock(TransformerBlock):
         self,
         x: torch.Tensor,
         input_ids_T: torch.Tensor,
-        attention_metadata: FlexAttentionMetadata | VarlenAttentionMetadata | None,
+        attention_metadata: BlockMask | VarlenAttentionMetadata | None,
         positions: torch.Tensor | None = None,
         *,
         padding_mask: torch.Tensor | None = None,
@@ -305,7 +305,9 @@ class DeepSeekV4Model(Decoder):
             layer_attention_metadata = (
                 None
                 if attention_metadata is None
-                else attention_metadata.get(type(layer.attention.inner_attention))
+                else attention_metadata.get(
+                    type(cast(TransformerBlock, layer).attention.inner_attention)
+                )
             )
             h = layer(
                 h,

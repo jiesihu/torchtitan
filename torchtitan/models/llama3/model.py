@@ -10,11 +10,9 @@ from dataclasses import dataclass
 
 import torch
 from torch import nn
+from torch.nn.attention.flex_attention import BlockMask
 
-from torchtitan.models.common.attention import (
-    FlexAttentionMetadata,
-    VarlenAttentionMetadata,
-)
+from torchtitan.models.common.attention import VarlenAttentionMetadata
 from torchtitan.models.common.decoder import Decoder, TransformerBlock
 from torchtitan.models.utils import (
     get_nparams_and_active_nparams,
@@ -49,7 +47,7 @@ class Llama3TransformerBlock(TransformerBlock):
     def forward(
         self,
         x: torch.Tensor,
-        attention_metadata: FlexAttentionMetadata | VarlenAttentionMetadata | None,
+        attention_metadata: BlockMask | VarlenAttentionMetadata | None,
         positions: torch.Tensor | None = None,
         *,
         padding_mask: torch.Tensor | None = None,

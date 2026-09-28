@@ -16,10 +16,9 @@ from torchtitan.models.deepseek_v3.mtp import MTPLoss, roll_mtp_sequence
 from .model import DeepSeekV4TransformerBlock
 
 if TYPE_CHECKING:
-    from torchtitan.models.common.attention import (
-        FlexAttentionMetadata,
-        VarlenAttentionMetadata,
-    )
+    from torch.nn.attention.flex_attention import BlockMask
+
+    from torchtitan.models.common.attention import VarlenAttentionMetadata
 
     from .mhc import HcHead
 
@@ -51,7 +50,7 @@ class MTPBlock(DeepSeekV4TransformerBlock):
         prev_hc_hidden: torch.Tensor,
         mtp_input_ids_T: torch.Tensor,
         mtp_input_valid_mask: torch.Tensor,
-        attention_metadata: "FlexAttentionMetadata | VarlenAttentionMetadata | None",
+        attention_metadata: "BlockMask | VarlenAttentionMetadata | None",
         positions: torch.Tensor | None = None,
         *,
         padding_mask: torch.Tensor | None = None,

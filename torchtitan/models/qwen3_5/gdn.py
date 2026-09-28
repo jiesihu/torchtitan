@@ -23,7 +23,11 @@ from torchtitan.distributed.parallel_dims import MeshAxisName
 from torchtitan.distributed.spmd_types import spmd_dense_sp_enabled, spmd_mesh_group
 from torchtitan.distributed.utils import is_in_batch_invariant_mode
 from torchtitan.models.common import Conv1d, Linear
-from torchtitan.models.common.attention import VarlenAttentionMetadata
+from torchtitan.models.common.attention import (
+    create_varlen_metadata_for_document,
+    InnerAttention,
+    VarlenAttentionMetadata,
+)
 from torchtitan.protocols.module import Module
 
 
@@ -262,7 +266,7 @@ class GatedDeltaKernel(Module):
         return output.squeeze(0)
 
 
-class InnerGatedDeltaNet(Module):
+class InnerGatedDeltaNet(InnerAttention):
     """Dense GDN computation behind the vLLM replacement boundary.
 
     The trainer keeps Q, K, and V separate, matching the main-branch GDN flow.
@@ -271,8 +275,26 @@ class InnerGatedDeltaNet(Module):
     """
 
     @dataclass(kw_only=True, slots=True)
-    class Config(Module.Config):
+    class Config(InnerAttention.Config):
         kernel: GatedDeltaKernel.Config
+
+    @staticmethod
+    def build_attention_metadata(
+        positions: torch.Tensor,
+        *,
+        config: InnerAttention.Config,
+        padding_mask: torch.Tensor | None = None,
+        max_num_documents: int | None = None,
+        max_context_length: int | None = None,
+    ) -> VarlenAttentionMetadata:
+        """Build packed-sequence metadata consumed by Gated DeltaNet."""
+        assert isinstance(config, InnerGatedDeltaNet.Config)
+        return create_varlen_metadata_for_document(
+            positions,
+            padding_mask=padding_mask,
+            max_num_documents=max_num_documents,
+            max_context_length=max_context_length,
+        )
 
     def __init__(self, config: Config):
         super().__init__()

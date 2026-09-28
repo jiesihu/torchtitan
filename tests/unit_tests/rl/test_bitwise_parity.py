@@ -370,7 +370,9 @@ def _flex_prefill_logprobs(model, input_tensors, seq_lens, device):
         separate_full_blocks=not batch_invariant,
     )
 
-    logits = model(packed_ids, attention_metadata=attention_metadata, positions=positions)
+    logits = model(
+        packed_ids, attention_metadata=attention_metadata, positions=positions
+    )
 
     # Build pre-shifted labels matching the trainer convention:
     # labels[i] = packed_ids[i+1] for valid positions, IGNORE_INDEX otherwise.
@@ -407,7 +409,9 @@ def _varlen_prefill_logprobs(model, input_tensors, seq_lens, device):
     # Hybrid models may require different metadata for each attention type.
     attention_metadata = model.get_attention_metadata(positions)
 
-    logits = model(packed_ids, attention_metadata=attention_metadata, positions=positions)
+    logits = model(
+        packed_ids, attention_metadata=attention_metadata, positions=positions
+    )
 
     # Build pre-shifted labels matching the trainer convention:
     # labels[i] = packed_ids[i+1] within each segment, IGNORE_INDEX otherwise.
